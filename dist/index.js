@@ -6871,6 +6871,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
+const checkstyle_1 = __webpack_require__(646);
 const fast_xml_parser_1 = __importDefault(__webpack_require__(989));
 const fs_1 = __importDefault(__webpack_require__(747));
 const path = __importStar(__webpack_require__(622));
@@ -6886,10 +6887,9 @@ function asArray(arg) {
 }
 function getWarningLevel(arg) {
     switch (arg) {
-        case '1':
+        case checkstyle_1.Severity.error:
             return github_1.AnnotationLevel.failure;
-        case '2':
-        case '3':
+        case checkstyle_1.Severity.warning:
             return github_1.AnnotationLevel.warning;
         default:
             return github_1.AnnotationLevel.notice;
@@ -6903,16 +6903,16 @@ function annotationsForPath(resultFile) {
     return ramda_1.chain(file => {
         return ramda_1.map(violation => {
             const annotation = {
-                annotation_level: getWarningLevel(violation.priority),
+                annotation_level: getWarningLevel(violation.severity),
                 path: path.relative(root, file.name),
-                start_line: Number(violation.beginline || 1),
-                end_line: Number(violation.endline || violation.beginline || 1),
-                title: `${violation.ruleset} ${violation.rule}`,
-                message: violation['#text']
+                start_line: Number(violation.line || 1),
+                end_line: Number(violation.line || 1),
+                title: violation.source,
+                message: violation.message
             };
             return annotation;
-        }, asArray(file.violation));
-    }, asArray((_a = result.pmd) === null || _a === void 0 ? void 0 : _a.file));
+        }, asArray(file.error));
+    }, asArray((_a = result.checkstyle) === null || _a === void 0 ? void 0 : _a.file));
 }
 exports.annotationsForPath = annotationsForPath;
 
@@ -8457,7 +8457,8 @@ const search_1 = __webpack_require__(589);
 const constants_1 = __webpack_require__(32);
 const annotations_1 = __webpack_require__(147);
 const ramda_1 = __webpack_require__(61);
-const github_1 = __webpack_require__(469);
+const github_1 = __webpack_require__(824);
+const github_2 = __webpack_require__(469);
 const MAX_ANNOTATIONS_PER_REQUEST = 50;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -8476,8 +8477,9 @@ function run() {
                 core.debug(`Grouping ${annotations.length} annotations into chunks of ${MAX_ANNOTATIONS_PER_REQUEST}`);
                 const groupedAnnotations = ramda_1.splitEvery(MAX_ANNOTATIONS_PER_REQUEST, annotations);
                 core.debug(`Created ${groupedAnnotations.length} buckets`);
+                const conclusion = getConclusion(annotations);
                 for (const annotationSet of groupedAnnotations) {
-                    yield createCheck(name, title, annotationSet, annotations.length);
+                    yield createCheck(name, title, annotationSet, annotations.length, conclusion);
                 }
             }
         }
@@ -8486,14 +8488,30 @@ function run() {
         }
     });
 }
-function createCheck(name, title, annotations, numErrors) {
+function getConclusion(annotations) {
+    if (annotations.length === 0) {
+        return 'success';
+    }
+    const annotationsByLevel = ramda_1.groupBy(a => a.annotation_level, annotations);
+    if (annotationsByLevel[github_1.AnnotationLevel.failure] &&
+        annotationsByLevel[github_1.AnnotationLevel.failure].length) {
+        return 'failure';
+    }
+    else if (annotationsByLevel[github_1.AnnotationLevel.warning] &&
+        annotationsByLevel[github_1.AnnotationLevel.warning].length) {
+        return 'neutral';
+    }
+    return 'success';
+}
+function createCheck(name, title, annotations, numErrors, conclusion) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = github_1.getOctokit(core.getInput(constants_1.Inputs.Token));
-        const req = Object.assign(Object.assign({}, github_1.context.repo), { ref: github_1.context.sha });
+        const octokit = github_2.getOctokit(core.getInput(constants_1.Inputs.Token));
+        const req = Object.assign(Object.assign({}, github_2.context.repo), { ref: github_2.context.sha });
         const res = yield octokit.checks.listForRef(req);
         const existingCheckRun = res.data.check_runs.find(check => check.name === name);
         if (!existingCheckRun) {
-            const createRequest = Object.assign(Object.assign({}, github_1.context.repo), { head_sha: github_1.context.sha, name, status: 'completed', conclusion: numErrors === 0 ? 'success' : 'neutral', output: {
+            const createRequest = Object.assign(Object.assign({}, github_2.context.repo), { head_sha: github_2.context.sha, conclusion,
+                name, status: 'completed', output: {
                     title,
                     summary: `${numErrors} violation(s) found`,
                     annotations
@@ -8502,7 +8520,8 @@ function createCheck(name, title, annotations, numErrors) {
         }
         else {
             const check_run_id = existingCheckRun.id;
-            const update_req = Object.assign(Object.assign({}, github_1.context.repo), { check_run_id, status: 'completed', conclusion: numErrors === 0 ? 'success' : 'neutral', output: {
+            const update_req = Object.assign(Object.assign({}, github_2.context.repo), { conclusion,
+                check_run_id, status: 'completed', output: {
                     title,
                     summary: `${numErrors} violation(s) found`,
                     annotations
@@ -20798,7 +20817,22 @@ module.exports = join;
 
 /***/ }),
 /* 645 */,
-/* 646 */,
+/* 646 */
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var Severity;
+(function (Severity) {
+    Severity["error"] = "error";
+    Severity["warning"] = "warning";
+    Severity["info"] = "info";
+    Severity["ignore"] = "ignore";
+})(Severity = exports.Severity || (exports.Severity = {}));
+
+
+/***/ }),
 /* 647 */,
 /* 648 */
 /***/ (function(module, __unusedexports, __webpack_require__) {

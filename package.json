@@ -1,8 +1,8 @@
 {
-  "name": "pmd-github-action",
+  "name": "checkstyle-github-action",
   "version": "1.0.0",
   "private": false,
-  "description": "PMD GitHub action",
+  "description": "Checkstyle GitHub action",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
