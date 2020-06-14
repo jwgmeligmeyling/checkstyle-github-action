@@ -2,9 +2,9 @@ import * as core from '@actions/core'
 import {findResults} from './search'
 import {Inputs} from './constants'
 import {annotationsForPath} from './annotations'
-import {chain, splitEvery} from 'ramda'
-import {Annotation} from './github'
-import {getOctokit, context} from '@actions/github'
+import {chain, groupBy, splitEvery} from 'ramda'
+import {Annotation, AnnotationLevel} from './github'
+import {context, getOctokit} from '@actions/github'
 
 const MAX_ANNOTATIONS_PER_REQUEST = 50
 
@@ -39,8 +39,16 @@ async function run(): Promise<void> {
       )
       core.debug(`Created ${groupedAnnotations.length} buckets`)
 
+      const conclusion = getConclusion(annotations)
+
       for (const annotationSet of groupedAnnotations) {
-        await createCheck(name, title, annotationSet, annotations.length)
+        await createCheck(
+          name,
+          title,
+          annotationSet,
+          annotations.length,
+          conclusion
+        )
       }
     }
   } catch (error) {
@@ -48,12 +56,43 @@ async function run(): Promise<void> {
   }
 }
 
+function getConclusion(
+  annotations: Annotation[]
+): 'success' | 'failure' | 'neutral' {
+  if (annotations.length === 0) {
+    return 'success'
+  }
+
+  const annotationsByLevel: {[p: string]: Annotation[]} = groupBy(
+    a => a.annotation_level,
+    annotations
+  )
+
+  if (
+    annotationsByLevel[AnnotationLevel.failure] &&
+    annotationsByLevel[AnnotationLevel.failure].length
+  ) {
+    return 'failure'
+  } else if (
+    annotationsByLevel[AnnotationLevel.warning] &&
+    annotationsByLevel[AnnotationLevel.warning].length
+  ) {
+    return 'neutral'
+  }
+
+  return 'success'
+}
+
 async function createCheck(
   name: string,
   title: string,
   annotations: Annotation[],
-  numErrors: number
+  numErrors: number,
+  conclusion: 'success' | 'failure' | 'neutral'
 ): Promise<void> {
+  core.info(
+    `Uploading ${annotations.length} / ${numErrors} annotations to GitHub as ${name} with conclusion ${conclusion}`
+  )
   const octokit = getOctokit(core.getInput(Inputs.Token))
   const req = {
     ...context.repo,
@@ -69,9 +108,9 @@ async function createCheck(
     const createRequest = {
       ...context.repo,
       head_sha: context.sha,
+      conclusion,
       name,
       status: <const>'completed',
-      conclusion: numErrors === 0 ? <const>'success' : <const>'neutral',
       output: {
         title,
         summary: `${numErrors} violation(s) found`,
@@ -85,9 +124,9 @@ async function createCheck(
 
     const update_req = {
       ...context.repo,
+      conclusion,
       check_run_id,
       status: <const>'completed',
-      conclusion: numErrors === 0 ? <const>'success' : <const>'neutral',
       output: {
         title,
         summary: `${numErrors} violation(s) found`,

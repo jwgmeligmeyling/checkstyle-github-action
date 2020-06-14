@@ -1,5 +1,5 @@
-name: 'Push PMD report'
-description: 'Push PMD Code Analysis report'
+name: 'Push Checkstyle report'
+description: 'Push Checkstyle code adherence report'
 author: 'Jan-Willem Gmelig Meyling'
 inputs:
   path:
@@ -7,10 +7,10 @@ inputs:
     required: true
   name:
     description: 'Check run name under which the report is created'
-    default: PMD
+    default: Checkstyle
   title:
     description: 'Check run title under which the report is created'
-    default: PMD Source Code Analyzer report
+    default: Checkstyle report
   token:
     description: >
       Personal access token (PAT) used to fetch the repository. The PAT is configured
