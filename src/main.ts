@@ -95,9 +95,15 @@ async function createCheck(
     `Uploading ${annotations.length} / ${numErrors} annotations to GitHub as ${name} with conclusion ${conclusion}`
   )
   const octokit = getOctokit(core.getInput(Inputs.Token))
+  let sha = context.sha
+
+  if (context.payload.pull_request) {
+    sha = context.payload.pull_request.head.sha
+  }
+
   const req = {
     ...context.repo,
-    ref: context.sha
+    ref: sha
   }
 
   const res = await octokit.checks.listForRef(req)
@@ -108,7 +114,7 @@ async function createCheck(
   if (!existingCheckRun) {
     const createRequest = {
       ...context.repo,
-      head_sha: context.sha,
+      head_sha: sha,
       conclusion,
       name,
       status: <const>'completed',

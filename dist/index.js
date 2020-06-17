@@ -8476,11 +8476,15 @@ function createCheck(name, title, annotations, numErrors, conclusion) {
     return __awaiter(this, void 0, void 0, function* () {
         core.info(`Uploading ${annotations.length} / ${numErrors} annotations to GitHub as ${name} with conclusion ${conclusion}`);
         const octokit = github_2.getOctokit(core.getInput(constants_1.Inputs.Token));
-        const req = Object.assign(Object.assign({}, github_2.context.repo), { ref: github_2.context.sha });
+        let sha = github_2.context.sha;
+        if (github_2.context.payload.pull_request) {
+            sha = github_2.context.payload.pull_request.head.sha;
+        }
+        const req = Object.assign(Object.assign({}, github_2.context.repo), { ref: sha });
         const res = yield octokit.checks.listForRef(req);
         const existingCheckRun = res.data.check_runs.find(check => check.name === name);
         if (!existingCheckRun) {
-            const createRequest = Object.assign(Object.assign({}, github_2.context.repo), { head_sha: github_2.context.sha, conclusion,
+            const createRequest = Object.assign(Object.assign({}, github_2.context.repo), { head_sha: sha, conclusion,
                 name, status: 'completed', output: {
                     title,
                     summary: `${numErrors} violation(s) found`,
