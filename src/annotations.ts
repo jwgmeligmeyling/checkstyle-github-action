@@ -33,7 +33,7 @@ export function annotationsForPath(resultFile: string): Annotation[] {
   const root: string = process.env['GITHUB_WORKSPACE'] || ''
 
   const result: CheckstyleReport = parser.parse(
-    fs.readFileSync(resultFile, <const>'UTF-8'),
+    fs.readFileSync(resultFile, {encoding: 'utf8', flag: 'r'}),
     XML_PARSE_OPTIONS
   )
 

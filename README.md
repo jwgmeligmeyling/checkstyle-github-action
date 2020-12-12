@@ -18,6 +18,9 @@ Multiple files can be processed through a [glob expression](https://github.com/a
 ### `name`
 Optional. Name for the check run to create. Defaults to `Checkstyle`.
 
+### `commit`
+Optional. The commit sha to update the status. This is useful when you run it with `workflow_run`.
+
 ### `title`
 Optional. Title for the check run to create. Defaults to `Checkstyle Source Code Analyzer report`.
 
