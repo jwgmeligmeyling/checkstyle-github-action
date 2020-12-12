@@ -13,6 +13,7 @@ async function run(): Promise<void> {
     const path = core.getInput(Inputs.Path, {required: true})
     const name = core.getInput(Inputs.Name)
     const title = core.getInput(Inputs.Title)
+    const commit = core.getInput(Inputs.Commit)
 
     const searchResult = await findResults(path)
     if (searchResult.filesToUpload.length === 0) {
@@ -45,6 +46,7 @@ async function run(): Promise<void> {
       for (const annotationSet of groupedAnnotations) {
         await createCheck(
           name,
+          commit,
           title,
           annotationSet,
           annotations.length,
@@ -86,6 +88,7 @@ function getConclusion(
 
 async function createCheck(
   name: string,
+  commit: string,
   title: string,
   annotations: Annotation[],
   numErrors: number,
@@ -95,15 +98,13 @@ async function createCheck(
     `Uploading ${annotations.length} / ${numErrors} annotations to GitHub as ${name} with conclusion ${conclusion}`
   )
   const octokit = getOctokit(core.getInput(Inputs.Token))
-  let sha = context.sha
-
-  if (context.payload.pull_request) {
-    sha = context.payload.pull_request.head.sha
-  }
+  const head_sha = commit ||
+                   (context.payload.pull_request && context.payload.pull_request.head.sha) ||
+                   context.sha;
 
   const req = {
     ...context.repo,
-    ref: sha
+    ref: head_sha
   }
 
   const res = await octokit.checks.listForRef(req)
@@ -114,7 +115,7 @@ async function createCheck(
   if (!existingCheckRun) {
     const createRequest = {
       ...context.repo,
-      head_sha: sha,
+      head_sha,
       conclusion,
       name,
       status: <const>'completed',
