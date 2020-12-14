@@ -5,6 +5,9 @@ inputs:
   path:
     description: 'A file, directory or wildcard pattern that describes where to find the reports'
     required: true
+  mode:
+    description: 'Reporting mode to use. Inline reports annotations in the current job, separate (default) creates a new job.'
+    default: separate
   name:
     description: 'Check run name under which the report is created'
     default: Checkstyle

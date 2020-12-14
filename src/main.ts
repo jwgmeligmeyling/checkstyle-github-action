@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import * as command from '@actions/core/lib/command'
 import {findResults} from './search'
 import {Inputs} from './constants'
 import {annotationsForPath} from './annotations'
@@ -11,8 +12,14 @@ const MAX_ANNOTATIONS_PER_REQUEST = 50
 async function run(): Promise<void> {
   try {
     const path = core.getInput(Inputs.Path, {required: true})
+    const mode = core.getInput(Inputs.Mode)
     const name = core.getInput(Inputs.Name)
     const title = core.getInput(Inputs.Title)
+
+    if (mode !== 'inline' && mode !== 'separate') {
+      core.error(`Invalid mode provided (${mode}). Use "inline" or "separate".`)
+      return
+    }
 
     const searchResult = await findResults(path)
     if (searchResult.filesToUpload.length === 0) {
@@ -40,16 +47,35 @@ async function run(): Promise<void> {
 
       core.debug(`Created ${groupedAnnotations.length} buckets`)
 
-      const conclusion = getConclusion(annotations)
+      if (mode === 'separate') {
+        const conclusion = getConclusion(annotations)
 
-      for (const annotationSet of groupedAnnotations) {
-        await createCheck(
-          name,
-          title,
-          annotationSet,
-          annotations.length,
-          conclusion
-        )
+        for (const annotationSet of groupedAnnotations) {
+          await createCheck(
+            name,
+            title,
+            annotationSet,
+            annotations.length,
+            conclusion
+          )
+        }
+      } else if (mode === 'inline') {
+        for (const annotation of annotations) {
+          // Github only supports "error" and "warning".
+          let commandName = 'error'
+          if (annotation.annotation_level == AnnotationLevel.warning)
+            commandName = 'warning'
+
+          command.issueCommand(
+            commandName,
+            {
+              file: annotation.path,
+              line: annotation.start_line,
+              col: annotation.start_column
+            },
+            annotation.message
+          )
+        }
       }
     }
   } catch (error) {

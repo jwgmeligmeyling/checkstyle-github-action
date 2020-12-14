@@ -2,9 +2,6 @@ name: "build-test"
 on: # rebuild any PRs and main branch changes
   pull_request:
   push:
-    branches:
-      - master
-      - 'releases/*'
 
 jobs:
   build: # make sure build/ci work properly
@@ -14,10 +11,19 @@ jobs:
     - run: |
         npm install
         npm run all
-  test: # make sure the action works on a clean machine without building
+  test_separate: # make sure the action works on a clean machine without building
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: ./
       with: 
         path: '**/checkstyle-result.xml'
+        mode: 'separate'
+  test_inline: # make sure the action works on a clean machine without building
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: ./
+      with: 
+        path: '**/checkstyle-result.xml'
+        mode: 'inline'

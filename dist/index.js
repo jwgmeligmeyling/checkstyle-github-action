@@ -109,6 +109,7 @@ exports.Inputs = void 0;
 var Inputs;
 (function (Inputs) {
     Inputs["Name"] = "name";
+    Inputs["Mode"] = "mode";
     Inputs["Title"] = "title";
     Inputs["Path"] = "path";
     Inputs["Token"] = "token";
@@ -169,6 +170,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__webpack_require__(2186));
+const command = __importStar(__webpack_require__(7351));
 const search_1 = __webpack_require__(2506);
 const constants_1 = __webpack_require__(5105);
 const annotations_1 = __webpack_require__(5598);
@@ -180,8 +182,13 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const path = core.getInput(constants_1.Inputs.Path, { required: true });
+            const mode = core.getInput(constants_1.Inputs.Mode);
             const name = core.getInput(constants_1.Inputs.Name);
             const title = core.getInput(constants_1.Inputs.Title);
+            if (mode !== 'inline' && mode !== 'separate') {
+                core.error(`Invalid mode provided (${mode}). Use "inline" or "separate".`);
+                return;
+            }
             const searchResult = yield search_1.findResults(path);
             if (searchResult.filesToUpload.length === 0) {
                 core.warning(`No files were found for the provided path: ${path}. No results will be uploaded.`);
@@ -195,9 +202,24 @@ function run() {
                     ? ramda_1.splitEvery(MAX_ANNOTATIONS_PER_REQUEST, annotations)
                     : [annotations];
                 core.debug(`Created ${groupedAnnotations.length} buckets`);
-                const conclusion = getConclusion(annotations);
-                for (const annotationSet of groupedAnnotations) {
-                    yield createCheck(name, title, annotationSet, annotations.length, conclusion);
+                if (mode === 'separate') {
+                    const conclusion = getConclusion(annotations);
+                    for (const annotationSet of groupedAnnotations) {
+                        yield createCheck(name, title, annotationSet, annotations.length, conclusion);
+                    }
+                }
+                else if (mode === 'inline') {
+                    for (const annotation of annotations) {
+                        // Github only supports "error" and "warning".
+                        let commandName = 'error';
+                        if (annotation.annotation_level == github_1.AnnotationLevel.warning)
+                            commandName = 'warning';
+                        command.issueCommand(commandName, {
+                            file: annotation.path,
+                            line: annotation.start_line,
+                            col: annotation.start_column
+                        }, annotation.message);
+                    }
                 }
             }
         }
