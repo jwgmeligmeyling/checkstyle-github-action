@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 import {CheckstyleReport, File, Severity} from './checkstyle'
 import parser from 'fast-xml-parser'
 import fs from 'fs'
+import BufferEncoding from 'buffer'
 import * as path from 'path'
 import {Annotation, AnnotationLevel} from './github'
 import {chain, map} from 'ramda'
@@ -33,7 +34,7 @@ export function annotationsForPath(resultFile: string): Annotation[] {
   const root: string = process.env['GITHUB_WORKSPACE'] || ''
 
   const result: CheckstyleReport = parser.parse(
-    fs.readFileSync(resultFile, <const>'UTF-8'),
+    fs.readFileSync(resultFile, 'UTF-8' as BufferEncoding),
     XML_PARSE_OPTIONS
   )
 
