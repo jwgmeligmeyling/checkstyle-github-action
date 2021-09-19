@@ -10,7 +10,7 @@ inputs:
     default: Checkstyle
   title:
     description: 'Check run title under which the report is created'
-    default: Checkstyle report
+    default: Checkstyle Source Code Analyzer report
   token:
     description: >
       Personal access token (PAT) used to fetch the repository. The PAT is configured
