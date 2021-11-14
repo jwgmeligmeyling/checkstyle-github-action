@@ -51,6 +51,9 @@ async function run(): Promise<void> {
           conclusion
         )
       }
+      if (conclusion == 'failure') {
+        core.setFailed('failure')
+      }
     }
   } catch (error) {
     core.setFailed(error instanceof Error ? error : String(error))
