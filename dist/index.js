@@ -198,6 +198,9 @@ function run() {
                 for (const annotationSet of groupedAnnotations) {
                     yield createCheck(name, title, annotationSet, annotations.length, conclusion);
                 }
+                if (conclusion == 'failure') {
+                    core.setFailed('failure');
+                }
             }
         }
         catch (error) {
